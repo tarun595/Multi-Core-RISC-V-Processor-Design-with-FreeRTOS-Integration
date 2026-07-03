@@ -1,0 +1,57 @@
+% --- Script to load machine code into the dual-core model ---
+disp('Loading programs for dual-core test...');
+
+MODEL_NAME = 'dual_core_v2'; % Define your model name here
+
+%% --- Program for Core 0 ---
+hex_code_core0 = {
+    'FFF002B7',  % lui  x5, 0xFFFF0
+    '00100313',  % addi x6, x0, 1
+    '00602023',  % sw   x6, 0(x0)
+    '0002A223',  % sw   x0, 4(x5)
+    '00002383',  % WAIT: lw   x7, 0(x0)
+    '00638EE3',  % beq  x7, x6, WAIT
+    '00138313',  % addi x6, x7, 1
+    '00602023',  % sw   x6, 0(x0)
+    '0002A223',  % sw   x0, 4(x5)
+    'FE1FF06F'   % jal  x0, WAIT
+};
+machine_code_core0 = hex2dec(hex_code_core0);
+
+% Find the block
+block_path_cell_0 = find_system(MODEL_NAME, 'Name', 'Instruction_Memory_0');
+
+% --- NEW: Error Checking ---
+if isempty(block_path_cell_0)
+    error('Could not find block named "Instruction_Memory_0" in model "%s". Please check names.', MODEL_NAME);
+else
+    block_path_core0 = block_path_cell_0{1}; 
+    set_param(block_path_core0, 'Table', mat2str(machine_code_core0));
+    disp('Core 0 program loaded successfully.');
+end
+
+%% --- Program for Core 1 ---
+hex_code_core1 = {
+    'FFFF02B7',  % lui  x5, 0xFFFF0
+    '0000006F',  % WAIT_FOR_IRQ: jal x0, WAIT_FOR_IRQ
+    '00002383',  % lw   x7, 0(x0)
+    '00138313',  % addi x6, x7, 1
+    '00602023',  % sw   x6, 0(x0)
+    '0002A023',  % sw   x0, 0(x5)
+    'FF5FF06F'   % jal  x0, WAIT_FOR_IRQ
+};
+machine_code_core1 = hex2dec(hex_code_core1);
+
+% Find the block
+block_path_cell_1 = find_system(MODEL_NAME, 'Name', 'Instruction_Memory_1');
+
+% --- NEW: Error Checking ---
+if isempty(block_path_cell_1)
+    error('Could not find block named "Instruction_Memory_1" in model "%s". Please check names.', MODEL_NAME);
+else
+    block_path_core1 = block_path_cell_1{1};
+    set_param(block_path_core1, 'Table', mat2str(machine_code_core1));
+    disp('Core 1 program loaded successfully.');
+end
+
+disp('--- All programs loaded. Ready for simulation. ---');
